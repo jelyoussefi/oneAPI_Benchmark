@@ -8,9 +8,10 @@ BUILD_DIR=${CURRENT_DIR}/build
 TOOLCHAIN_DIR?=${CURRENT_DIR}/toolchain
 
 ONEAPI_ROOT ?= /opt/intel/oneapi
+OPENVINO_DIR ?= /opt/intel/openvino_2021
 export TERM=xterm
 
-CXX_COMPILER=$${ONEAPI_ROOT}/compiler/latest/linux/bin/dpcpp
+CXX_COMPILER=${ONEAPI_ROOT}/compiler/latest/linux/bin/dpcpp
 CXX_FLAGS=" -fsycl  -O3 "
 
 DEVICE ?= GPU
@@ -39,18 +40,20 @@ install_prerequisites:
 	
 
 build: 	
-	@$(call msg,Building the matrix multiplication Application   ...)
+	@$(call msg,Building the Benchmarking Application   ...)
 	@mkdir -p ${BUILD_DIR} && cd ${BUILD_DIR} && \
-		bash -c  ' \
+		bash -c  'source ${ONEAPI_ROOT}/setvars.sh --force && source ${OPENVINO_DIR}/bin/setupvars.sh && \
 		CXX=${CXX_COMPILER} \
 		CXXFLAGS=${CXX_FLAGS} \
-		cmake .. && \
-		 make '
+		cmake \
+			-B . \
+			-S .. && \
+		make '
 
 run: build
-	@$(call msg,Runung the matrix multiplication Application ...)
+	@$(call msg,Runung the Benchmarking Application ...)
 	@rm -f ./core
-	@bash -c  'source ${ONEAPI_ROOT}/setvars.sh --force && \
+	@bash -c  'source ${ONEAPI_ROOT}/setvars.sh --force && source ${OPENVINO_DIR}/bin/setupvars.sh && \
 		${BUILD_DIR}/matrix_mul '
 
 

@@ -40,11 +40,10 @@ high_resolution_clock::time_point time_now() {
 #define TIMER_START(suffix) \
 	high_resolution_clock::time_point t_start##suffix = time_now();
 
-#define TIMER_STOP(suffix) \
-	{																\
-		auto diff = time_elapsed(t_start##suffix);								\
-		std::cout<<"\t"<<std::string(#suffix)<<" : \t\t"<<std::fixed<<std::setprecision(1)<<RED<<diff<< " ms"<<RESET<< std::endl;\
-																									    		\
+#define TIMER_STOP(suffix)																										\
+	{																															\
+		auto diff = time_elapsed(t_start##suffix);																				\
+		std::cout<<"\t"<<std::string(#suffix)<<": \t"<<std::fixed<<std::setprecision(1)<<RED<<diff<< " ms"<<RESET<< std::endl; 	\
 	}
 
 #endif

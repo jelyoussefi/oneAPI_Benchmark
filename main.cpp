@@ -193,6 +193,7 @@ int main() {
 
     std::cout << "\n---------------------------------------------------------------------------------" << std::endl;
     std::cout << "    Device\t: " <<RED<< q.get_device().get_info<sycl::info::device::name>()<<RESET<< std::endl;
+    std::cout << "    CU    \t: " <<RED<< q.get_device().get_info<sycl::info::device::max_compute_units>()<<RESET<< std::endl;
     std::cout << "    USM   \t: " <<RED<< (usm ? ((usm==1 ? "Shared" : "Device")): "None")<<RESET<< std::endl;
     std::cout << "---------------------------------------------------------------------------------" << std::endl;
 
@@ -206,16 +207,14 @@ int main() {
     cv::Mat a(M, N, CV_32F, a_buf);
     cv::Mat b(N, P, CV_32F, b_buf);
     cv::Mat c(M, P, CV_32F, c_buf);
-  // Initialize the device queue with the default selector. The device queue is
-    // used to enqueue kernels. It encapsulates all states needed for execution.
-    
-    usm ? matrix_multi_usm(a, b, c, q) : matrix_multi_buffer(a, b, c, q);
-
-    TIMER_START(time);
   
+    std::cout << "\tWarming up ..."<< std::endl;
     usm ? matrix_multi_usm(a, b, c, q) : matrix_multi_buffer(a, b, c, q);
 
-    TIMER_STOP(time);
+    std::cout << "\tProcessing ...\n"<< std::endl;
+    TIMER_START(Time);
+    usm ? matrix_multi_usm(a, b, c, q) : matrix_multi_buffer(a, b, c, q);
+    TIMER_STOP(Time);
     if (verify) {
         auto status = verifyResult(a, b, c, q);
         std::cout<<"\tstatus:\t\t" << RED << (status ? "OK" : "KO")<<RESET<< std::endl; 
