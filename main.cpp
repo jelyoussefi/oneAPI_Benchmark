@@ -59,7 +59,7 @@ bool verifyResult(cv::Mat& a, cv::Mat& b, cv::Mat& c, sycl::queue &q) {
 
     q.submit([&](sycl::handler &cgh) {
         auto d_status = & status;
-        cgh.host_task([=]() {
+        cgh.host_task([=]() { 
             int i, j, k;
 
             for (i = 0; i < M; i++) {
