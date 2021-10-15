@@ -14,11 +14,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL Clang )
 
 	if (CUDA)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsycl-targets=spir64_x86_64,nvptx64-nvidia-cuda -Xsycl-target-backend=spir64_x86_64 \"-march=avx512\" -Wno-unknown-cuda-version ")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsycl-targets=nvptx64-nvidia-cuda -Wno-unknown-cuda-version ")
 		else()
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsycl-targets=spir64_x86_64-unknown-unknown-sycldevice,spir64_gen-unknown-unknown-sycldevice" )
 			set(CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_CXX_FLAGS} -Xsycl-target-backend=spir64_x86_64-unknown-unknown-sycldevice -march=avx512  -Xsycl-target-backend=spir64_gen-unknown-unknown-sycldevice \"-device *\"")
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_CXX_FLAGS}  -Xsycl-target-backend=spir64_x86_64-unknown-unknown-sycldevice -march=avx512  -Xsycl-target-backend=spir64_gen-unknown-unknown-sycldevice \"-device *\"")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 		endif(CUDA)	
 	
 endif()

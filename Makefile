@@ -11,24 +11,21 @@ TOOLS_DIR=${CURRENT_DIR}/tools
 ONEAPI_ROOT ?= /opt/intel/oneapi
 export TERM=xterm
 
-DEVICE  ?= CPU
+DEVICE  ?= GPU
 CUDA ?= OFF
-ONEAPI_DPC_COMPILER ?= ON
 
 ifeq ($(CUDA),ON)
-ONEAPI_DPC_COMPILER = OFF
-TOOLCHAIN_FLAGS = --cuda --cmake-opt=-DCMAKE_PREFIX_PATH="/usr/local/cuda/lib64/stubs/"
-endif
-
-ifeq ($(ONEAPI_DPC_COMPILER),ON)
-CXX_COMPILER=$${ONEAPI_ROOT}/compiler/latest/linux/bin/dpcpp
-else
 CXX_COMPILER=${TOOLCHAIN_DIR}/llvm/build/bin/clang++
-LD_FLAGS=${TOOLCHAIN_DIR}/llvm/build/install/lib
+TOOLCHAIN_FLAGS = --cuda --cmake-opt=-DCMAKE_PREFIX_PATH="/usr/local/cuda/lib64/stubs/"
+LD_LIBRARY_PATH=${TOOLCHAIN_DIR}/llvm/build/install/lib:${LD_LIBRARY_PATH}
+else
+CXX_COMPILER=${ONEAPI_ROOT}/compiler/latest/linux/bin/dpcpp
+LD_LIBRARY_PATH=$(shell source ${ONEAPI_ROOT}/setvars.sh --force > \
+	/dev/null 2>&1 && env | grep ^LD_LIBRARY_PATH | awk -F"=" '{print $$2}')
 endif
 
-CXX_FLAGS="-fsycl  -O3 -g \
-	-Wno-parentheses-equality -Wno-writable-strings   "
+
+CXX_FLAGS="-fsycl  -O3 "
 
 
 export IGC_EnableDPEmulation=1
@@ -57,7 +54,7 @@ install_prerequisites:
 
 
 toolchain:
-ifneq ($(ONEAPI_DPC_COMPILER),ON)
+ifeq ($(CUDA),ON)
 	if [ ! -f "${TOOLCHAIN_DIR}/.done" ]; then \
 		mkdir -p ${TOOLCHAIN_DIR} && rm -rf ${TOOLCHAIN_DIR}/* && \
 		$(call msg,Building Cuda Toolchain  ...) && \
@@ -76,10 +73,9 @@ build: toolchain
 	
 	@$(call msg,Building the Application   ...)
 	@mkdir -p ${BUILD_DIR} && cd ${BUILD_DIR} && \
-		bash -c  'source ${ONEAPI_ROOT}/setvars.sh --force &&  \
+		bash -c  '  \
 		CXX=${CXX_COMPILER} \
 		CXXFLAGS=${CXX_FLAGS} \
-		LDFLAGS=${LDD_FLAGS} \
 		cmake \
 		    -DCUDA=${CUDA} \
 		     .. && \
@@ -88,51 +84,12 @@ build: toolchain
 run: build
 	@$(call msg,Runung the Mammo Application ...)
 	@bash -c  'source ${ONEAPI_ROOT}/setvars.sh --force &&  \
-		 rm -f ./OutputImage.raw ./core && \
-		 LD_LIBRARY_PATH=${LD_FLAGS}:./:$${LD_LIBRARY_PATH} \
 		 ${BUILD_DIR}/matrix_mul'
 
 clean:
 	@rm -rf  ${BUILD_DIR}
 
 
-#----------------------------------------------------------------------------------------------------------------------
-# Docker
-#----------------------------------------------------------------------------------------------------------------------
-DOCKER_FILE = Dockerfile
-DOCKER_IMAGE_NAME = ref_valid
-DOCKER_RUN_FLAGS=--privileged -v /dev:/dev
-
-ifeq ($(CUDA),ON)
-	DOCKER_FILE := ${DOCKER_FILE}-cuda
-	DOCKER_IMAGE_NAME:=${DOCKER_IMAGE_NAME}-cuda
-	DOCKER_RUN_FLAGS = --env CUDA=ON --gpus all
-endif
-
-DOCKER_BUILD_FLAGS:= --build-arg CUDA=${CUDA} 
-
-docker-proxy:
-ifneq ($(HTTP_PROXY),)
-	@sudo mkdir -p /etc/systemd/system/docker.service.d
-	@grep -q ${HTTP_PROXY} /etc/systemd/system/docker.service.d/http-proxy.conf > /dev/null 2>&1 || \
-		sudo bash -c " \
-		echo '[Service]' > /etc/systemd/system/docker.service.d/http-proxy.conf && \
-		echo 'Environment=\"HTTP_PROXY=${HTTP_PROXY}\"' >> /etc/systemd/system/docker.service.d/http-proxy.conf && \
-		echo 'Environment=\"HTTPS_PROXY=${HTTPS_PROXY}\"' >> /etc/systemd/system/docker.service.d/http-proxy.conf && \
-		echo 'Environment=\"NO_PROXY=localhost,127.0.0.1\"' >> /etc/systemd/system/docker.service.d/http-proxy.conf && \
-		systemctl daemon-reload && systemctl restart docker"
-else
-	@sudo bash -c "rm -rf /etc/systemd/system/docker.service.d/http-proxy.conf && \
-		  systemctl daemon-reload && systemctl restart docker"
-endif
-
-docker-build: docker-proxy
-	@$(call msg, Building docker image ${DOCKER_IMAGE_NAME}  ...)
-	@docker build   -f ${DOCKER_FILE} ${DOCKER_BUILD_FLAGS} -t ${DOCKER_IMAGE_NAME} .
-
-docker-run:
-	@$(call msg, Running docker container for ${DOCKER_IMAGE_NAME} image  ...)
-	@docker run -it -a stdout -a stderr --network=host ${DOCKER_RUN_FLAGS}  ${DOCKER_IMAGE_NAME} bash
 	
 #----------------------------------------------------------------------------------------------------------------------
 # helper functions
