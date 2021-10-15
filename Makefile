@@ -17,7 +17,7 @@ CUDA ?= OFF
 ifeq ($(CUDA),ON)
 CXX_COMPILER=${TOOLCHAIN_DIR}/llvm/build/bin/clang++
 TOOLCHAIN_FLAGS = --cuda --cmake-opt=-DCMAKE_PREFIX_PATH="/usr/local/cuda/lib64/stubs/"
-LD_LIBRARY_PATH=${TOOLCHAIN_DIR}/llvm/build/install/lib:${LD_LIBRARY_PATH}
+LD_LIBRARY_PATH:=${TOOLCHAIN_DIR}/llvm/build/install/lib:${LD_LIBRARY_PATH}
 else
 CXX_COMPILER=${ONEAPI_ROOT}/compiler/latest/linux/bin/dpcpp
 LD_LIBRARY_PATH=$(shell source ${ONEAPI_ROOT}/setvars.sh --force > \
@@ -83,8 +83,7 @@ build: toolchain
 
 run: build
 	@$(call msg,Runung the Mammo Application ...)
-	@bash -c  'source ${ONEAPI_ROOT}/setvars.sh --force &&  \
-		 ${BUILD_DIR}/matrix_mul'
+	@bash -c  '${BUILD_DIR}/matrix_mul'
 
 clean:
 	@rm -rf  ${BUILD_DIR}
